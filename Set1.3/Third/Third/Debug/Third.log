@@ -1,5 +1,5 @@
 ﻿  Source.cpp
-d:\projects\algorytmyrozproszone\set1.3\third\third\source.cpp(92): warning C4101: 'j': unreferenced local variable
-d:\projects\algorytmyrozproszone\set1.3\third\third\source.cpp(92): warning C4101: 'i': unreferenced local variable
+d:\projects\algorytmyrozproszone\set1.3\third\third\source.cpp(100): warning C4101: 'i': unreferenced local variable
+d:\projects\algorytmyrozproszone\set1.3\third\third\source.cpp(100): warning C4101: 'j': unreferenced local variable
   Third.vcxproj -> D:\Projects\AlgorytmyRozproszone\Set1.3\Third\Debug\Third.exe
   Third.vcxproj -> D:\Projects\AlgorytmyRozproszone\Set1.3\Third\Debug\Third.pdb (Full PDB)

@@ -8,8 +8,8 @@
 #include <cstdlib>
 #include <time.h>
 
-void sendPackMatrix(double**, int);
-void recvPackMatrix(double**, int);
+void sendPackMatrix(double**, int, int);
+void recvPackMatrix(double**, int, int);
 void logFileFunction(int);
 void printMatrix(double**, int);
 
@@ -29,51 +29,59 @@ int main(int argc, char* argv[]) {
 
 	logFileFunction(rank);
 
-	double **matrix = new double *[size];
+	double **matrixGenerated = new double *[size];
+	double **matrixGet = new double *[size];
 
 	srand((unsigned)time(NULL) + rank);
-	cout << "Processor number: " << rank << endl;
+	//cout << "Processor number: " << rank << endl;
 	for (int i = 0; i < size; i++, cout << endl) {
-		matrix[i] = new double[size];
+		matrixGenerated[i] = new double[size];
 		for (int j = 0; j < size; j++, cout << " ") {
 			double r = ((double)rand() / (RAND_MAX));
-			matrix[i][j] = r;
-			cout << matrix[i][j] << " ";
+			matrixGenerated[i][j] = r;
+			//cout << matrixGenerated[i][j] << " ";
 		}
 	}
+
+	cout << "Matrix Generated: " << endl;
+	printMatrix(matrixGenerated, size);
 
 	int tPackSize;
 	MPI_Pack_size(size * size, MPI_DOUBLE, MPI_COMM_WORLD, &tPackSize);
 	packSize = tPackSize;
 	
-	if (rank % 2 == 0) {
-		recvPackMatrix(matrix, size);
+	if ((rank % 2) == 0) {
+		sendPackMatrix(matrixGenerated, size, rank + 1);
+		recvPackMatrix(matrixGet, size, rank + 1);
 		//printMatrix(matrix, size);
-		for (int i = 0; i < size; i++, cout << endl) {
-			for (int j = 0; j < size; j++, cout << " ") {
-				cout << matrix[i][j] << " ";
-			}
-		}
 	}
-	else if (rank % 2 == 1)
+	else
 	{
-		sendPackMatrix(matrix, size);
+		recvPackMatrix(matrixGet, size, rank - 1);
+		sendPackMatrix(matrixGenerated, size, rank - 1);
 		//printMatrix(matrix, size);
 	} 
 
-	cout << endl;
+	cout << "Matrix Generated: " << endl;
+	printMatrix(matrixGenerated, size);
+
+	cout << "Matrix receive: " << endl;
+	printMatrix(matrixGet, size);
+	logFile.close();
+	
+	for (int i = 0; i < size; i++)
+		delete[] matrixGenerated[i];
+	delete[] matrixGenerated;
 
 	for (int i = 0; i < size; i++)
-		delete[] matrix[i];
-	delete[] matrix;
-
-	logFile.close();
+		delete[] matrixGet[i];
+	delete[] matrixGet;
 
 	MPI_Finalize();
 	return 0;
 }
 
-void sendPackMatrix(double** matrix, int size) {
+void sendPackMatrix(double** matrix, int size, int rank) {
 
 	buf = new char[packSize];
 	int position = 0;
@@ -83,23 +91,23 @@ void sendPackMatrix(double** matrix, int size) {
 			MPI_Pack(&matrix[i][j], 1, MPI_DOUBLE, buf, packSize, &position, MPI_COMM_WORLD);
 		}
 	}
-	MPI_Send(buf, packSize, MPI_PACKED, 0, 200, MPI_COMM_WORLD);
+	MPI_Send(buf, packSize, MPI_PACKED, rank, 200, MPI_COMM_WORLD);
 	delete[] buf;
 }
 
-void recvPackMatrix(double** matrix, int size) {
+void recvPackMatrix(double** matrix, int size, int rank) {
 	MPI_Status status;
-	int position = 0, i, j;
+	int position = 0, j, i;
 	double elements;
 
 	buf = new char[packSize];
-	MPI_Recv(buf, packSize, MPI_PACKED, 1, 200, MPI_COMM_WORLD, &status);
+	MPI_Recv(buf, packSize, MPI_PACKED, rank, 200, MPI_COMM_WORLD, &status);
 
 	for (int i = 0; i < size; i++)
 	{
 		for (int j = 0; j < size; j++) {
 			MPI_Unpack(buf, packSize, &position, &elements, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-			matrix[i][j] = elements;
+			//matrix[i][j] = elements;
 		}
 	}
 
@@ -110,21 +118,20 @@ void recvPackMatrix(double** matrix, int size) {
 	//	MPI_Unpack(buf, packSize, &position, &elements, 1, MPI_DOUBLE, MPI_COMM_WORLD);
 	//	matrix[i][j] = elements;
 	//}
+
+	cout << elements;
 	delete[] buf;
 }
 
 void logFileFunction(int rank) {
-	ostringstream oss;
-	oss << "log.proc_" << rank;
-	logFile.open((oss.str().c_str()));
+	fstream oss;
+	logFile.open("log.proc_" + rank, fstream::out | fstream::trunc);
 }
 
 void printMatrix(double** matrix, int size) {
-	logFile << "matrix = " << endl;
-	for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; j++)
-		{
+	for (int i = 0; i<size; i++) {
+		for (int j = 0; j<size; j++) {
+			logFile << std::fixed;
 			logFile << matrix[i][j] << " ";
 		}
 		logFile << endl;

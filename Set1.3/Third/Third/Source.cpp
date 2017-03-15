@@ -33,37 +33,40 @@ int main(int argc, char* argv[]) {
 	double **matrixGet = new double *[size];
 
 	srand((unsigned)time(NULL) + rank);
-	//cout << "Processor number: " << rank << endl;
 	for (int i = 0; i < size; i++, cout << endl) {
 		matrixGenerated[i] = new double[size];
 		for (int j = 0; j < size; j++, cout << " ") {
 			double r = ((double)rand() / (RAND_MAX));
 			matrixGenerated[i][j] = r;
-			//cout << matrixGenerated[i][j] << " ";
 		}
 	}
 
 	cout << "Matrix Generated: " << endl;
 	printMatrix(matrixGenerated, size);
+	cout << endl;
 
 	int tPackSize;
-	MPI_Pack_size(size * size, MPI_DOUBLE, MPI_COMM_WORLD, &tPackSize);
-	packSize = tPackSize;
+	MPI_Pack_size(size, MPI_DOUBLE, MPI_COMM_WORLD, &tPackSize);
+	packSize += tPackSize;
+	cout << sizeof(double) << endl;
+	cout << tPackSize << endl;
+	cout << packSize << endl;
+
 	
 	if ((rank % 2) == 0) {
 		sendPackMatrix(matrixGenerated, size, rank + 1);
 		recvPackMatrix(matrixGet, size, rank + 1);
 		//printMatrix(matrix, size);
 	}
-	else
+	else if ((rank % 2) == 1)
 	{
 		recvPackMatrix(matrixGet, size, rank - 1);
 		sendPackMatrix(matrixGenerated, size, rank - 1);
-		//printMatrix(matrix, size);
-	} 
+	}
 
 	cout << "Matrix Generated: " << endl;
 	printMatrix(matrixGenerated, size);
+	cout << endl;
 
 	cout << "Matrix receive: " << endl;
 	printMatrix(matrixGet, size);
@@ -86,12 +89,15 @@ void sendPackMatrix(double** matrix, int size, int rank) {
 	buf = new char[packSize];
 	int position = 0;
 
-	for (int i = 0; i < size - 1; i++) {
-		for (int j = 0; j < size - 1; j++) {
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			MPI_Pack(&i, 1, MPI_INT, buf, packSize, &position, MPI_COMM_WORLD);
+			MPI_Pack(&j, 1, MPI_INT, buf, packSize, &position, MPI_COMM_WORLD);
 			MPI_Pack(&matrix[i][j], 1, MPI_DOUBLE, buf, packSize, &position, MPI_COMM_WORLD);
 		}
 	}
-	MPI_Send(buf, packSize, MPI_PACKED, rank, 200, MPI_COMM_WORLD);
+	MPI_Send(&packSize, 1, MPI_INT, rank, 321, MPI_COMM_WORLD);
+	MPI_Send(buf, packSize, MPI_PACKED, rank, 123, MPI_COMM_WORLD);
 	delete[] buf;
 }
 
@@ -100,24 +106,25 @@ void recvPackMatrix(double** matrix, int size, int rank) {
 	int position = 0, j, i;
 	double elements;
 
+	MPI_Recv(&packSize, 1, MPI_INT, rank, 321, MPI_COMM_WORLD, &status);
 	buf = new char[packSize];
-	MPI_Recv(buf, packSize, MPI_PACKED, rank, 200, MPI_COMM_WORLD, &status);
+	MPI_Recv(buf, packSize, MPI_PACKED, rank, 123, MPI_COMM_WORLD, &status);
 
-	for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; j++) {
-			MPI_Unpack(buf, packSize, &position, &elements, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-			//matrix[i][j] = elements;
-		}
-	}
-
-	//for (int k = 0; k < size; k++)
+	//for (int i = 0; i < size; i++)
 	//{
-	//	MPI_Unpack(buf, packSize, &position, &i, 1, MPI_INT, MPI_COMM_WORLD);
-	//	MPI_Unpack(buf, packSize, &position, &j, 1, MPI_INT, MPI_COMM_WORLD);
-	//	MPI_Unpack(buf, packSize, &position, &elements, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-	//	matrix[i][j] = elements;
+	//	for (int j = 0; j < size; j++) {
+	//		MPI_Unpack(buf, packSize, &position, &elements, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+	//		matrix[i][j] = elements;
+	//	}
 	//}
+
+	for (int k = 0; k < size; k++)
+	{
+		MPI_Unpack(buf, packSize, &position, &i, size, MPI_INT, MPI_COMM_WORLD);
+		MPI_Unpack(buf, packSize, &position, &j, size, MPI_INT, MPI_COMM_WORLD);
+		MPI_Unpack(buf, packSize, &position, &elements, size, MPI_DOUBLE, MPI_COMM_WORLD);
+		matrix[i][j] = elements;
+	}
 
 	cout << elements;
 	delete[] buf;

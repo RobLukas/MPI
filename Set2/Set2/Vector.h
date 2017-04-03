@@ -13,7 +13,6 @@ public:
 	float getZ();
 	float getLength();
 
-
 private:
 	float x, y, z;
 

@@ -1,5 +1,0 @@
-﻿  Source.cpp
-c:\projects\mpi\set2\set2\source.cpp(19): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\projects\mpi\set2\set2\source.cpp(15): warning C4101: 'textArray': unreferenced local variable
-  Set2.vcxproj -> C:\Projects\MPI\Set2\Debug\Set2.exe
-  Set2.vcxproj -> C:\Projects\MPI\Set2\Debug\Set2.pdb (Partial PDB)
